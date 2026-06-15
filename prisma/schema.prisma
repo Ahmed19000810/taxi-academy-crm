@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  uid           String   @unique
+  email         String   @unique
+  displayName   String?
+  photoURL      String?
+  phoneNumber   String?
+  role          Role     @default(AGENT)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime @default(now())
+  leads         Lead[]
+  bookings      Booking[]
+  auditLogs     AuditLog[]
+}
+
+enum Role { ADMIN MANAGER AGENT }
+
+model Lead {
+  id            String   @id @default(cuid())
+  customerName  String
+  phoneNumber   String
+  email         String?
+  agentName     String
+  status        LeadStatus @default(NEW)
+  source        String?
+  notes         String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     User?    @relation(fields: [createdById], references: [id])
+  booking       Booking?
+}
+
+enum LeadStatus { NEW CONTACTED QUALIFIED CONVERTED LOST }
+
+model Booking {
+  id            String   @id @default(cuid())
+  customerName  String
+  phoneNumber   String
+  email         String?
+  bookingDate   DateTime
+  agentName     String
+  notes         String?
+  leadId        String?  @unique
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lead          Lead?    @relation(fields: [leadId], references: [id])
+  createdBy     User?    @relation(fields: [createdById], references: [id])
+}
+
+model EligibilityRule {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  condition   String
+  value       String
+  points      Int      @default(0)
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+}
+
+model EligibilityCheck {
+  id            String   @id @default(cuid())
+  customerName  String
+  age           Int
+  council       String
+  licenceIssueDate DateTime
+  points        Int
+  convictions   String
+  dbsStatus     String
+  medicalStatus String
+  rightToWork   String
+  result        EligibilityResult
+  reasons       String
+  score         Int
+  checkedById   String?
+  createdAt     DateTime @default(now())
+  checkedBy     User?    @relation(fields: [checkedById], references: [id])
+}
+
+enum EligibilityResult { ELIGIBLE REVIEW_REQUIRED INELIGIBLE }
+
+model VerificationResult {
+  id              String   @id @default(cuid())
+  customerName    String
+  phoneNumber     String
+  leadAgent       String
+  bookingAgent    String?
+  bookingDate     DateTime?
+  matchStatus     MatchStatus
+  confidenceScore Float
+  matchedField    String?
+  leadId          String?
+  bookingId       String?
+  createdAt     DateTime @default(now())
+}
+
+enum MatchStatus { MATCHED UNMATCHED DUPLICATE }
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entity     String
+  entityId   String?
+  details    String?
+  userId     String?
+  userEmail  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}
